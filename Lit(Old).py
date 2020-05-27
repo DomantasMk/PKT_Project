@@ -1,13 +1,13 @@
 from sly import Lexer
 from sly import Parser
 
-class BasicLexer(Lexer):
+class LitLexer(Lexer):
     tokens = { NAME, NUMBER, STRING, JEIGU, TADA, KITAIP, CIKLAS, FUN, IKI, ARROW, EQEQ, GREATER, LESSER, GREATEROREQ, LESSEROREQ, KINTAMASIS, SPAUSDINTI }
-    ignore = '\t '
+    ignore = '\t ' # ignore tabs or spaces
 
-    literals = { '=', '+', '-', '/', '*', '(', ')', '{', '}', ',', ';', '>', '<'}
+    literals = { '=', '+', '-', '/', '*', '(', ')', '{', '}', ',', ';', '>', '<'} # one character tokens
 
-    # Define tokens
+    # actual tokens
     JEIGU = r'JEIGU'
     TADA = r'TADA'
     KITAIP = r'KITAIP'
@@ -17,8 +17,8 @@ class BasicLexer(Lexer):
     KINTAMASIS = r'KINTAMASIS'
     SPAUSDINTI = r'SPAUSDINTI'
     ARROW = r'->'
-    NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
-    STRING = r'\".*?\"'
+    NAME = r'[a-zA-Z_][a-zA-Z0-9_]*' # first character must be a-Z and the rest a-9 or _
+    STRING = r'\".*?\"' # define string between " " symbols
 
     EQEQ = r'=='
     GREATER = r'>'
@@ -26,21 +26,21 @@ class BasicLexer(Lexer):
     GREATEROREQ = r'>='
     LESSEROREQ = r'<='
 
-    @_(r'\d+')
-    def NUMBER(self, t):
+    @_(r'\d+') # one or more digits
+    def NUMBER(self, t): # converting to python number
         t.value = int(t.value)
-        return t
+        return t # returning token
 
-    @_(r'#.*')
+    @_(r'#.*') # comments starts with # symbol
     def COMMENT(self, t):
-        pass
+        pass # passing to ignore
 
-    @_(r'\n+')
+    @_(r'\n+') # if we see new line, we increment line number variable
     def newline(self,t ):
-        self.lineno = t.value.count('\n')
+        self.lineno = t.value.count('\n') # it's only to tell what line error accured on
 
-class BasicParser(Parser):
-    tokens = BasicLexer.tokens
+class LitParser(Parser):
+    tokens = BasicLexer.tokens # passing tokens from lexer to parser
 
     precedence = (
         ('left', GREATER, LESSER, GREATEROREQ, LESSEROREQ, EQEQ),
@@ -52,19 +52,19 @@ class BasicParser(Parser):
     def __init__(self):
         self.env = { }
 
-    @_('')
+    @_('') # if empty, do nothing
     def statement(self, p):
         pass
 
-    @_('CIKLAS "(" var_assign IKI expr ")" "{" statement "}"')
+    @_('CIKLAS "(" var_assign IKI expr ")" "{" statement "}"') # loop satement
     def statement(self, p):
-        return ('for_loop', ('for_loop_setup', p.var_assign, p.expr), p.statement)
+        return ('for_loop', ('for_loop_setup', p.var_assign, p.expr), p.statement) # (root, first child, second child)
 
-    @_('JEIGU "(" condition ")" TADA statement KITAIP statement')
+    @_('JEIGU "(" condition ")" TADA statement KITAIP statement') # if statement
     def statement(self, p):
         return ('if_stmt', p.condition, ('branch', p.statement0, p.statement1))
 
-    @_('FUN NAME "(" ")" ARROW statement')
+    @_('FUN NAME "(" ")" ARROW statement') # function statement
     def statement(self, p):
         return ('fun_def', p.NAME, p.statement)
 
@@ -72,23 +72,23 @@ class BasicParser(Parser):
     def statement(self, p):
         return ('fun_call', p.NAME)
 
-    @_('expr EQEQ expr')
+    @_('expr EQEQ expr') # equals condition
     def condition(self, p):
         return ('condition_eqeq', p.expr0, p.expr1)
 
-    @_('expr GREATER expr')
+    @_('expr GREATER expr') # greater condition
     def condition(self, p):
         return ('condition_greater', p.expr0, p.expr1)
 
-    @_('expr LESSER expr')
+    @_('expr LESSER expr') # less condition
     def condition(self, p):
         return ('condition_lesser', p.expr0, p.expr1)
 
-    @_('expr GREATEROREQ expr')
+    @_('expr GREATEROREQ expr') # greater or equal condition
     def condition(self, p):
         return ('condition_greateroreq', p.expr0, p.expr1)
 
-    @_('expr LESSEROREQ expr')
+    @_('expr LESSEROREQ expr') # less or equal condition
     def condition(self, p):
         return ('condition_lesseroreq', p.expr0, p.expr1)
 
@@ -96,11 +96,11 @@ class BasicParser(Parser):
     def statement(self, p):
         return p.var_assign
 
-    @_('KINTAMASIS NAME "=" expr')
+    @_('KINTAMASIS NAME "=" expr') # assign expression
     def var_assign(self, p):
         return ('var_assign', p.NAME, p.expr)
 
-    @_('KINTAMASIS NAME "=" STRING')
+    @_('KINTAMASIS NAME "=" STRING') # assign string
     def var_assign(self, p):
         return ('var_assign', p.NAME, p.STRING)
 
@@ -150,11 +150,11 @@ class BasicParser(Parser):
 
 
 
-class BasicExecute:
+class LitExecute:
 
     def __init__(self, tree, env):
         self.env = env
-        result = self.walkTree(tree)
+        result = self.walkTree(tree) # recursively calling tree node
         if result is not None and isinstance(result, int):
             print(result)
         if isinstance(result, str) and result[0] == '"':
@@ -253,15 +253,15 @@ class BasicExecute:
 
 
 if __name__ == '__main__':
-    lexer = BasicLexer()
-    parser = BasicParser()
+    lexer = LitLexer()
+    parser = LitParser()
     env = {}
-    while True:
+    while True: # infinite loop
         try:
-            text = input('Lit-- > ')
+            text = input('Lit-- > ') # get input from the user
         except EOFError:
             break
-        if text:
-           tree = parser.parse(lexer.tokenize(text))
-           BasicExecute(tree, env)
+        if text: # if input is ok
+           tree = parser.parse(lexer.tokenize(text)) # passing input to the lexer
+           LitExecute(tree, env)
            #print(tree)
